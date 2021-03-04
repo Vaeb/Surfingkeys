@@ -911,6 +911,8 @@ var ChromeService = (function() {
             }
         });
     };
+
+    const oldTabRecords = {};
     self.newWindow = function(message, sender, sendResponse) {
         chrome.tabs.query({}, function(tabs) {
             var tabInWindow = {};
@@ -920,16 +922,24 @@ var ChromeService = (function() {
             });
             if (tabInWindow[sender.tab.windowId] && tabInWindow[sender.tab.windowId].length === 1) {
                 // if there is only one tab in current window,
-                // then move this tab into the window with most tabs.
-                var maximumTab = 0, windowWithMostTab;
-                for (var w in tabInWindow) {
-                    if (tabInWindow[w].length > maximumTab) {
-                        maximumTab = tabInWindow[w].length;
-                        windowWithMostTab = w;
+                const oldTabData = oldTabRecords[sender.tab.id];
+                if (oldTabData && tabInWindow[oldTabData.windowId]) {
+                    chrome.tabs.move(sender.tab.id, { windowId: oldTabData.windowId, index: oldTabData.index });
+                    chrome.tabs.update(sender.tab.id, { active: true });
+                    delete oldTabRecords[sender.tab.id];
+                } else {
+                    // then move this tab into the window with most tabs.
+                    var maximumTab = 0, windowWithMostTab;
+                    for (var w in tabInWindow) {
+                        if (tabInWindow[w].length > maximumTab) {
+                            maximumTab = tabInWindow[w].length;
+                            windowWithMostTab = w;
+                        }
                     }
+                    chrome.tabs.move(sender.tab.id, {windowId: parseInt(windowWithMostTab), index: -1});
                 }
-                chrome.tabs.move(sender.tab.id, {windowId: parseInt(windowWithMostTab), index: -1});
             } else {
+                oldTabRecords[sender.tab.id] = { windowId: sender.tab.windowId, index: sender.tab.index };
                 chrome.windows.create({tabId: sender.tab.id});
             }
         });
