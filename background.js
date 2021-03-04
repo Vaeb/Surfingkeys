@@ -1537,6 +1537,10 @@ var ChromeService = (function() {
         chrome.tts.stop();
     };
 
+    self.openRegular = function(message, sender, sendResponse) {
+        chrome.windows.create({});
+    };
+
     self.openIncognito = function(message, sender, sendResponse) {
         chrome.windows.create({"url": message.url, "incognito": true});
     };
