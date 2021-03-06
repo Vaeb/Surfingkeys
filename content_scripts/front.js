@@ -235,6 +235,12 @@ function createFront() {
         }
     };
 
+    self.switchWindow = function() {
+        frontendCommand({
+            action: 'switchWindow',
+        });
+    };
+
     self.openOmnibar = function(args) {
         args.action = 'openOmnibar';
         frontendCommand(args);

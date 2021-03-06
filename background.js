@@ -726,7 +726,8 @@ var ChromeService = (function() {
                 });
             }
             _response(message, sendResponse, {
-                tabs: tabs
+                tabs: tabs,
+                activeTab: tab,
             });
         });
     };
@@ -944,6 +945,60 @@ var ChromeService = (function() {
             }
         });
     };
+
+    self.switchTabWindow = function(message, sender, sendResponse) {
+        const senderTab = sender.tab;
+
+        chrome.tabs.query({}, (tabs) => {
+            const [winToTabs, winToNumPinned] = tabs.reduce((acc, tab) => {
+                const [_winToTabs, _winToNumPinned] = acc;
+
+                if (_winToTabs[tab.windowId] === undefined) _winToTabs[tab.windowId] = [];
+                if (_winToNumPinned[tab.windowId] === undefined) _winToNumPinned[tab.windowId] = 0;
+
+                _winToTabs[tab.windowId].push(tab);
+                if (tab.pinned) _winToNumPinned[tab.windowId];
+
+                return acc;
+            }, [{}, {}]);
+
+            // const windowIds = Object.keys(winToTabs).sort((id1, id2) => {
+            //     return winToTabs[id2].length - winToTabs[id1].length;
+            // });
+
+            // if (!winToTabs[senderTab.windowId] || windowIds.length < 2) return;
+
+            const windowId1 = senderTab.windowId;
+            // const windowId2 = winToTabs[windowIds.find((id) => id != windowId1)][0].windowId;
+            const windowId2 = message.windowId;
+
+            const isPinned = senderTab.pinned;
+
+            const useTabs1 = winToTabs[windowId1].filter(tab => tab.pinned === isPinned);
+            const useTabs2 = winToTabs[windowId2].filter(tab => tab.pinned === isPinned);
+            if (useTabs2.length === 0) useTabs2.push(winToTabs[windowId2].length);
+
+            const numRegTabs1 = useTabs1.length;
+            const numRegTabs2 = useTabs2.length;
+            const senderTabPos = useTabs1.findIndex((tab) => tab.id === senderTab.id);
+            const middleOffset2 = Math.floor(numRegTabs2 / 2);
+            let newIndex;
+
+            if (senderTabPos < numRegTabs1 / 2) {
+                const newOffset = Math.min(senderTabPos, middleOffset2); // Offset from start of useTabs2
+                newIndex = useTabs2[0].index + newOffset;
+            } else {
+                const newOffset = Math.min(numRegTabs1 - (senderTabPos + 1), middleOffset2); // Offset from end of useTabs2
+                newIndex = useTabs2[useTabs2.length - 1].index - newOffset + 1;
+            }
+
+            chrome.tabs.move(senderTab.id, { windowId: windowId2, index: newIndex });
+            chrome.tabs.update(senderTab.id, { active: true, pinned: isPinned });
+            if (isPinned) chrome.tabs.move(senderTab.id, { index: newIndex });
+            chrome.windows.update(windowId2, { focused: true });
+        });
+    };
+
     self.getBookmarkFolders = function(message, sender, sendResponse) {
         chrome.bookmarks.getTree(function(tree) {
             bookmarkFolders = [];

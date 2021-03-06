@@ -30,13 +30,19 @@ var Front = (function() {
                 _tabs.trie = _tabs.trie.find(event.sk_keyName);
                 if (!_tabs.trie) {
                     self.hidePopup();
+                    _tabs.callback = null;
                     _tabs.trie = null;
                 } else if (_tabs.trie.meta) {
-                    RUNTIME('focusTab', {
-                        tab_id: _tabs.trie.meta.id,
-                        window_id: _tabs.trie.meta.windowId
-                    });
+                    if (!_tabs.callback) {
+                        RUNTIME('focusTab', {
+                            tab_id: _tabs.trie.meta.id,
+                            window_id: _tabs.trie.meta.windowId
+                        });
+                    } else {
+                        _tabs.callback(_tabs.trie.meta.windowId);
+                    }
                     self.hidePopup();
+                    _tabs.callback = null;
                     _tabs.trie = null;
                 }
                 event.sk_stopPropagation = true;
@@ -165,23 +171,80 @@ var Front = (function() {
         self.flush();
     }
 
-    _tabs.onShow = function(tabs) {
-        setSanitizedContent(_tabs, "");
-        _tabs.trie = new Trie();
-        var hintLabels = Hints.genLabels(tabs.length);
-        tabs.forEach(function(t, i) {
-            var tab = document.createElement('div');
-            tab.setAttribute('class', 'sk_tab');
-            tab.style.width = '200px';
-            _tabs.trie.add(hintLabels[i].toLowerCase(), t);
-            setSanitizedContent(tab, `<div class=sk_tab_hint>${hintLabels[i]}</div><div class=sk_tab_wrap><div class=sk_tab_icon><img src='chrome://favicon/${t.url}'></div><div class=sk_tab_title>${htmlEncode(t.title)}</div></div>`);
-            tab.url = t.url;
-            _tabs.append(tab);
-        });
-        _tabs.querySelectorAll('div.sk_tab').forEach(function(tab) {
-            tab.append(createElementWithContent('div', tab.url, {class: "sk_tab_url"}));
-        });
+    _tabs.onShow = function(data) {
+        if (!data.callback) {
+            const entries = data;
+            setSanitizedContent(_tabs, "");
+            _tabs.trie = new Trie();
+            var hintLabels = Hints.genLabels(entries.length);
+            entries.forEach(function(t, i) {
+                var tab = document.createElement('div');
+                tab.setAttribute('class', 'sk_tab');
+                tab.style.width = '200px';
+                _tabs.trie.add(hintLabels[i].toLowerCase(), t);
+                setSanitizedContent(tab, `<div class=sk_tab_hint>${hintLabels[i]}</div><div class=sk_tab_wrap><div class=sk_tab_icon><img src='chrome://favicon/${t.url}'/></div><div class=sk_tab_title>${htmlEncode(t.title)}</div></div>`);
+                tab.url = t.url;
+                _tabs.append(tab);
+            });
+            _tabs.querySelectorAll('div.sk_tab').forEach(function(tab) {
+                tab.append(createElementWithContent('div', tab.url, {class: "sk_tab_url"}));
+            });
+        } else {
+            const { windows, winToTabs, callback } = data;
+            setSanitizedContent(_tabs, "");
+            _tabs.trie = new Trie();
+            _tabs.callback = callback;
+            const hintLabels = Hints.genLabels(windows.length);
+            windows.forEach((windowId, index) => {
+                const option = document.createElement('div');
+                option.setAttribute('class', 'sk_tab');
+                option.style.display = 'block';
+                option.style.width = 'fit-content';
+                _tabs.trie.add(hintLabels[index].toLowerCase(), { windowId });
+                setSanitizedContent(option, `
+                    <div class=sk_tab_hint>${hintLabels[index]}</div>
+                    <div class=sk_tab_wrap>
+                        <div class=sk_tab_title>${index + 1}</div>
+                    </div>
+                `);
+                option.windowString = winToTabs[windowId].map((tab) => {
+                    let tabUrl = tab.url;
+                    let isHttpUrl = /^https?:\/\//i.test(tabUrl);
+                    if (!isHttpUrl) {
+                        const uri = /[?&]uri=([^\s]+)/i.exec(tabUrl);
+                        if (uri) {
+                            tabUrl = uri[1];
+                            isHttpUrl = true;
+                        }
+                    }
+                    const tabUrlObj = new URL(tabUrl);
+                    const hostname = tabUrlObj.hostname;
+                    const parts = hostname.split('.');
+                    const long2LDs = { org: true };
+                    let siteName;
+                    if (parts.length >= 2 && isHttpUrl) {
+                        siteName = parts[parts.length - 2];
+                        if (parts.length >= 3 && (siteName.length <= 2 || long2LDs[siteName])) {
+                            siteName = parts[parts.length - 3];
+                        }
+                        siteName = siteName.split(/[\-_]+/)
+                            .map(siteNamePart => `${siteNamePart[0].toUpperCase()}${siteNamePart.substring(1)}`)
+                            .join('-');
+                    } else {
+                        siteName = (/[\w-]+/.exec(tab.title) || [])[0];
+                    }
+                    return siteName;
+                }).join(' | ');
+                _tabs.append(option);
+            });
+            _tabs.querySelectorAll('div.sk_tab').forEach((option) => {
+                const skTabUrl = createElementWithContent('div', option.windowString, { class: 'sk_tab_url' });
+                skTabUrl.style.width = 'fit-content';
+                option.append(skTabUrl);
+            });
+        }
     };
+
     _actions['chooseTab'] = function() {
         RUNTIME('getTabs', null, function(response) {
             if (response.tabs.length > runtime.conf.tabsThreshold) {
@@ -189,6 +252,41 @@ var Front = (function() {
             } else if (response.tabs.length > 0) {
                 showPopup(_tabs, response.tabs);
             }
+        });
+    };
+
+    _actions['switchWindow'] = function() {
+        RUNTIME('getTabs', null, (response) => {
+            const callback = (windowId) => {
+                RUNTIME("switchTabWindow", { windowId });
+            };
+
+            const windows = [...new Set(response.tabs.map(tab => tab.windowId))] // sort by windowId, sort by most pinned tabs + most tabs
+                .filter(windowId => windowId != response.activeTab.windowId)
+                .sort((a, b) => a - b);
+
+            if (windows.length === 1) {
+                callback(windows[0]);
+                return;
+            }
+
+            const winToTabs = response.tabs.reduce((acc, tab) => {
+                if (acc[tab.windowId] === undefined) acc[tab.windowId] = [];
+                acc[tab.windowId].push(tab);
+                return acc;
+            }, {});
+
+            for (const windowId of windows) {
+                const tabs = winToTabs[windowId];
+                tabs.sort((a, b) => a.index - b.index);
+            }
+
+            const data = {
+                callback,
+                windows,
+                winToTabs,
+            };
+            showPopup(_tabs, data);
         });
     };
 
