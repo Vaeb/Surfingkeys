@@ -986,7 +986,7 @@ var ChromeService = (function() {
 
             if (senderTabPos < numRegTabs1 / 2) {
                 const newOffset = Math.min(senderTabPos, middleOffset2); // Offset from start of useTabs2
-                newIndex = useTabs2[0].index + newOffset;
+                newIndex = useTabs2[0].index + newOffset; // could be out of order??
             } else {
                 const newOffset = Math.min(numRegTabs1 - (senderTabPos + 1), middleOffset2); // Offset from end of useTabs2
                 newIndex = useTabs2[useTabs2.length - 1].index - newOffset + 1;
