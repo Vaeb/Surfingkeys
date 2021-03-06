@@ -738,6 +738,13 @@ var ChromeService = (function() {
             });
         });
     };
+
+    self.focusWindow = function (message, sender, sendResponse) {
+        chrome.windows.update(message.windowId, {
+            focused: true
+        });
+    };
+
     self.focusTab = function(message, sender, sendResponse) {
         if (message.window_id !== undefined && sender.tab.windowId !== message.window_id) {
             chrome.windows.update(message.window_id, {
@@ -1314,7 +1321,7 @@ var ChromeService = (function() {
         });
     };
     self.download = function(message, sender, sendResponse) {
-        chrome.downloads.download({ url: message.url })
+        chrome.downloads.download({ url: message.url });
     };
     self.executeScript = function(message, sender, sendResponse) {
         chrome.tabs.executeScript(sender.tab.id, {

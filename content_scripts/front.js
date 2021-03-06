@@ -241,6 +241,12 @@ function createFront() {
         });
     };
 
+    self.focusWindow = function() {
+        frontendCommand({
+            action: 'focusWindow',
+        });
+    };
+
     self.openOmnibar = function(args) {
         args.action = 'openOmnibar';
         frontendCommand(args);

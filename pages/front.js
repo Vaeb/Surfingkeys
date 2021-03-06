@@ -257,10 +257,45 @@ var Front = (function() {
         });
     };
 
+    _actions['focusWindow'] = function() {
+        RUNTIME('getTabs', null, (response) => {
+            const callback = (windowId) => {
+                RUNTIME('focusWindow', { windowId });
+            };
+
+            const windows = [...new Set(response.tabs.map(tab => tab.windowId))] // sort by windowId, sort by most pinned tabs + most tabs
+                .filter(windowId => windowId != response.activeTab.windowId)
+                .sort((a, b) => a - b);
+
+            if (windows.length === 1) {
+                callback(windows[0]);
+                return;
+            }
+
+            const winToTabs = response.tabs.reduce((acc, tab) => {
+                if (acc[tab.windowId] === undefined) acc[tab.windowId] = [];
+                acc[tab.windowId].push(tab);
+                return acc;
+            }, {});
+
+            for (const windowId of windows) {
+                const tabs = winToTabs[windowId];
+                tabs.sort((a, b) => a.index - b.index);
+            }
+
+            const data = {
+                callback,
+                windows,
+                winToTabs,
+            };
+            showPopup(_tabs, data);
+        });
+    };
+
     _actions['switchWindow'] = function() {
         RUNTIME('getTabs', null, (response) => {
             const callback = (windowId) => {
-                RUNTIME("switchTabWindow", { windowId });
+                RUNTIME('switchTabWindow', { windowId });
             };
 
             const windows = [...new Set(response.tabs.map(tab => tab.windowId))] // sort by windowId, sort by most pinned tabs + most tabs
