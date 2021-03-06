@@ -230,9 +230,11 @@ var Front = (function() {
                         siteName = siteName.split(/[\-_]+/)
                             .map(siteNamePart => `${siteNamePart[0].toUpperCase()}${siteNamePart.substring(1)}`)
                             .join('-');
+                        if (tab.pinned) siteName = `&lt;${siteName}&gt;`;
                     } else {
                         siteName = (/[\w-]+/.exec(tab.title) || [])[0];
                     }
+                    siteName = `<b>${siteName}</b>`;
                     return siteName;
                 }).join(' | ');
                 _tabs.append(option);
