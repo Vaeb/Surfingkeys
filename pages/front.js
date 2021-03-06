@@ -202,9 +202,9 @@ var Front = (function() {
                 option.style.width = 'fit-content';
                 _tabs.trie.add(hintLabels[index].toLowerCase(), { windowId });
                 setSanitizedContent(option, `
-                    <div class=sk_tab_hint>${hintLabels[index]}</div>
                     <div class=sk_tab_wrap>
                         <div class=sk_tab_title>${index + 1}</div>
+                        <div class=sk_tab_hint>${hintLabels[index]}</div>
                     </div>
                 `);
                 option.windowString = winToTabs[windowId].map((tab) => {
