@@ -990,18 +990,6 @@ function createNormal() {
             }
         }
     });
-    self.mappings.add("e", {
-        annotation: "Scroll half page up",
-        feature_group: 2,
-        repeatIgnore: true,
-        code: self.scroll.bind(self, "pageUp")
-    });
-    self.mappings.add("d", {
-        annotation: "Scroll half page down",
-        feature_group: 2,
-        repeatIgnore: true,
-        code: self.scroll.bind(self, "pageDown")
-    });
     self.mappings.add("gg", {
         annotation: "Scroll to the top of the page",
         feature_group: 2,
@@ -1121,23 +1109,6 @@ function createNormal() {
         repeatIgnore: true,
         code: function() {
             Visual.next(true);
-        }
-    });
-
-    self.mappings.add("E", {
-        annotation: "Go one tab left",
-        feature_group: 3,
-        repeatIgnore: true,
-        code: function() {
-            RUNTIME("previousTab");
-        }
-    });
-    self.mappings.add("R", {
-        annotation: "Go one tab right",
-        feature_group: 3,
-        repeatIgnore: true,
-        code: function() {
-            RUNTIME("nextTab");
         }
     });
 
