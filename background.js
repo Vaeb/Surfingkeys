@@ -1124,6 +1124,9 @@ var ChromeService = (function() {
                         openUrlInNewTab(tab, url, message);
                     });
                 } else {
+                    if (message.tab.pinned === "copy") {
+                        message.tab.pinned = sender.tab.pinned;
+                    }
                     openUrlInNewTab(sender.tab, url, message);
                 }
             } else {

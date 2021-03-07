@@ -705,8 +705,14 @@ mapkey('P', '#0enter ephemeral PassThrough mode to temporarily suppress SurfingK
 
 mapkey('u', 'Custom - Fresh nav reload', function() {
     var href = window.location.href;
+    RUNTIME("openLink", {
+        tab: {
+            tabbed: true,
+            pinned: "copy",
+        },
+        url: href,
+    });
     RUNTIME("closeTab");
-    tabOpenLink(href);
 });
 
 mapkey('gw', '#12View page source', function() {
