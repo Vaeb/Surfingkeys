@@ -74,7 +74,8 @@ mapkey('gr', '#14Read selected text or text from clipboard', function() {
 vmapkey('gr', '#9Read selected text', function() {
     readText(window.getSelection().toString(), {verbose: true});
 });
-
+map('g0', ':feedkeys 99E', 0, "#3Go to the first tab");
+map('g$', ':feedkeys 99R', 0, "#3Go to the last tab");
 mapkey('zr', '#3zoom reset', function() {
     RUNTIME('setZoom', {
         zoomFactor: 0
@@ -762,7 +763,7 @@ mapkey('D', '#3Focus a different window',  function() {
     Front.focusWindow();
 });
 
-unmapAllExcept(['<Alt-s>', 'p', 'q', 'e', 'r', 'R', 'g1', 'g2', ';e', 'u'], /https:\/\/app.hey.com\//);
+unmapAllExcept(['<Alt-s>', 'p', 't', 'q', 'e', 'r', 'R', 'g1', 'g2', ';e', 'u'], /https:\/\/app.hey.com\//);
 
 // removeSearchAliasX('b');
 // removeSearchAliasX('w');
